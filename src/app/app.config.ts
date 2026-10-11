@@ -6,7 +6,8 @@ import { provideState, provideStore } from '@ngrx/store';
 import { provideEffects } from '@ngrx/effects';
 import { connectionFeature } from './state/connection/connection.feature';
 import { ConnectionEffects } from './state/connection/connection.effects';
-
+import { preferencesFeature } from './state/preferences/preferences.feature';
+import { PreferencesEffects } from './state/preferences/preferences.effects';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -15,6 +16,7 @@ export const appConfig: ApplicationConfig = {
     provideTickerWorker(),
     provideStore(),
     provideState(connectionFeature),
-    provideEffects(ConnectionEffects),
+    provideState(preferencesFeature),
+    provideEffects(ConnectionEffects, PreferencesEffects),
   ]
 };
