@@ -10,6 +10,11 @@ const tick = (symbol: string, price: number): TickerData => ({
   symbol, price, changePercent: 0, volume: 0, timestamp: 0, isUp: true,
 });
 
+const setHidden = (hidden: boolean) => {
+  Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden });
+  document.dispatchEvent(new Event('visibilitychange'));
+};
+
 describe('MarketDataService', () => {
   let service: MarketDataService;
   let batches: Subject<TickerBatch>;
@@ -27,6 +32,7 @@ describe('MarketDataService', () => {
       connect: jest.fn<(symbols: string[]) => void>(),
       disconnect: jest.fn<() => void>(),
     };
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
     TestBed.configureTestingModule({
       providers: [{ provide: WebsocketService, useValue: fakeWs }],
     });
@@ -51,6 +57,20 @@ describe('MarketDataService', () => {
     });
   });
 
+  Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+  it('ignores batches while the tab is hidden and resumes when visible', () => {
+    const received: TickerData[][] = [];
+    const sub = service.getOptimizedMarketStream().subscribe(v => received.push(v));
+
+    batches.next({ ts: 1, tickers: [tick('BTCUSDT', 1)] });
+    setHidden(true);
+    batches.next({ ts: 2, tickers: [tick('BTCUSDT', 2)] });   // dropped
+    setHidden(false);
+    batches.next({ ts: 3, tickers: [tick('BTCUSDT', 3)] });
+
+    expect(received).toEqual([[tick('BTCUSDT', 1)], [tick('BTCUSDT', 3)]]);
+    sub.unsubscribe();
+  });
   describe('getOptimizedMarketStream', () => {
     it('passes each batch straight through at the default 1s rate', () => {
       const received: TickerData[][] = [];

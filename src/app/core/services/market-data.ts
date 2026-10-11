@@ -1,8 +1,9 @@
-import { inject, Injectable } from '@angular/core';
-import { WebsocketService } from './websocket';
-import { BinanceTickerPayload, TickerData } from '../models/market-data.model';
-import { BehaviorSubject, bufferTime, distinctUntilChanged, filter, map, Observable, switchMap } from 'rxjs';
+import { DOCUMENT } from '@angular/common';
+import { Injectable, inject } from '@angular/core';
+import { BehaviorSubject, EMPTY, Observable, bufferTime, distinctUntilChanged, filter, fromEvent, map, startWith, switchMap, } from 'rxjs';
+import { TickerData } from '../models/market-data.model';
 import { mergeBatches } from '../utils/merge-batches';
+import { WebsocketService } from './websocket';
 
 @Injectable({
   providedIn: 'root',
@@ -10,9 +11,16 @@ import { mergeBatches } from '../utils/merge-batches';
 export class MarketDataService {
 
   private readonly wsService = inject(WebsocketService);
+  private readonly doc = inject(DOCUMENT);
   // private readonly binanceWsUrl = 'wss://stream.binance.com:9443/ws';
   private readonly defaultSymbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'];
   private readonly refreshMs$ = new BehaviorSubject<number>(1000);
+
+  private readonly visible$ = fromEvent(this.doc, 'visibilitychange').pipe(
+    map(() => !this.doc.hidden),
+    startWith(!this.doc.hidden),
+    distinctUntilChanged(),
+  );
 
   start(symbols: string[] = this.defaultSymbols): void {
     this.wsService.connect(symbols);
@@ -36,16 +44,22 @@ export class MarketDataService {
   }
 
   getOptimizedMarketStream(): Observable<TickerData[]> {
+    return this.visible$.pipe(
+      switchMap(visible => (visible ? this.rateAwareStream() : EMPTY)),
+    );
+  }
+
+  private rateAwareStream(): Observable<TickerData[]> {
     return this.refreshMs$.pipe(
       distinctUntilChanged(),
       switchMap(ms =>
         ms <= 1000
           ? this.wsService.batches$.pipe(map(b => b.tickers))
           : this.wsService.batches$.pipe(
-              bufferTime(ms),
-              filter(batches => batches.length > 0),
-              map(mergeBatches),
-            ),
+            bufferTime(ms),
+            filter(batches => batches.length > 0),
+            map(mergeBatches),
+          ),
       ),
     );
   }
