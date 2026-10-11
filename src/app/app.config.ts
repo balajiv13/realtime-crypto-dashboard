@@ -8,6 +8,8 @@ import { connectionFeature } from './state/connection/connection.feature';
 import { ConnectionEffects } from './state/connection/connection.effects';
 import { preferencesFeature } from './state/preferences/preferences.feature';
 import { PreferencesEffects } from './state/preferences/preferences.effects';
+import { WatchlistEffects } from './state/watchlist/watchlist.effects';
+import { watchlistFeature } from './state/watchlist/watchlist.feature';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -17,6 +19,7 @@ export const appConfig: ApplicationConfig = {
     provideStore(),
     provideState(connectionFeature),
     provideState(preferencesFeature),
-    provideEffects(ConnectionEffects, PreferencesEffects),
+    provideState(watchlistFeature),
+    provideEffects(ConnectionEffects, PreferencesEffects, WatchlistEffects),
   ]
 };
