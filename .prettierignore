@@ -1,0 +1,6 @@
+dist
+coverage
+.angular
+node_modules
+out-tsc
+package-lock.json
