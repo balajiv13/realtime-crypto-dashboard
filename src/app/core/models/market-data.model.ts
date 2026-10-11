@@ -41,3 +41,24 @@ export interface TickerData {
     timestamp: number;
     isUp: boolean;
 }
+
+/** Combined-stream frames wrap the payload: { stream, data } */
+export interface BinanceStreamEnvelope {
+    stream: string;
+    data: BinanceTickerPayload;
+}
+
+export type ConnectionStatus = 'connecting' | 'open' | 'closed';
+
+export interface TickerBatch {
+    ts: number;
+    tickers: TickerData[];
+}
+
+export type WorkerIn =
+    | { type: 'connect'; symbols: string[] }
+    | { type: 'disconnect' };
+
+export type WorkerOut =
+    | { type: 'status'; status: ConnectionStatus }
+    | { type: 'batch'; batch: TickerBatch };

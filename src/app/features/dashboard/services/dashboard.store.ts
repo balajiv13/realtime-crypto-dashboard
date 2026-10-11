@@ -2,7 +2,7 @@ import { DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { patchState, signalStore, withHooks, withMethods, withState } from '@ngrx/signals';
 import { TickerData } from '../../../core/models/market-data.model';
-import { MarketDataService } from '../../../core/service/market-data';
+import { MarketDataService } from '../../../core/services/market-data';
 
 export interface DashboardState {
   tickers: TickerData[];
