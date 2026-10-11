@@ -1,6 +1,6 @@
 // core/service/websocket.service.ts  (adjust the import paths to your folders)
 import { Injectable, OnDestroy, inject, signal } from '@angular/core';
-import { Subject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { ConnectionStatus, TickerBatch, WorkerIn, WorkerOut } from '../models/market-data.model';
 import { TICKER_WORKER_FACTORY } from '../tokens/ticker-worker.token';
 
@@ -12,6 +12,14 @@ export class WebsocketService implements OnDestroy {
   private readonly _status = signal<ConnectionStatus>('closed');
   readonly status = this._status.asReadonly();
 
+  private readonly statusSubject = new BehaviorSubject<ConnectionStatus>('closed');
+  readonly status$ = this.statusSubject.asObservable();
+
+  private setStatus(s: ConnectionStatus): void {
+    this._status.set(s);
+    this.statusSubject.next(s);
+  }
+
   private readonly batchSubject = new Subject<TickerBatch>();
   readonly batches$ = this.batchSubject.asObservable();
 
@@ -20,10 +28,10 @@ export class WebsocketService implements OnDestroy {
     if (!this.worker) {
       this.worker = this.createWorker();
       this.worker.onmessage = ({ data }: MessageEvent<WorkerOut>) => {
-        if (data.type === 'status') this._status.set(data.status);
+        if (data.type === 'status') this.setStatus(data.status);
         else this.batchSubject.next(data.batch);
       };
-      this.worker.onerror = () => this._status.set('closed');
+      this.worker.onerror = () => this.setStatus('closed');
     }
     this.send({ type: 'connect', symbols });
   }
@@ -33,12 +41,13 @@ export class WebsocketService implements OnDestroy {
     this.send({ type: 'disconnect' });
     this.worker.terminate();
     this.worker = undefined;
-    this._status.set('closed');
+    this.setStatus('closed');
   }
 
   ngOnDestroy(): void {
     this.disconnect();
     this.batchSubject.complete();
+    this.statusSubject.complete();
   }
 
   private send(msg: WorkerIn): void {
